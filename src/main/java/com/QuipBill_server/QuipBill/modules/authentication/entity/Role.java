@@ -1,6 +1,9 @@
 package com.QuipBill_server.QuipBill.modules.authentication.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -11,12 +14,13 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)  // Stores enum as text in DB
     @Column(length = 50, unique = true, nullable = false)
     private RoleName name;
 
-    @ManyToMany(mappedBy = "roles")
-    private Set<Shop> users;
+    @JsonIgnore  // 🔥 Prevent infinite recursion in JSON
+    @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
+    private Set<Shop> users = new HashSet<>();
 
     // Constructors
     public Role() {}
@@ -40,5 +44,9 @@ public class Role {
 
     public Set<Shop> getUsers() {
         return users;
+    }
+
+    public void setUsers(Set<Shop> users) {
+        this.users = users;
     }
 }

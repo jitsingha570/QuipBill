@@ -9,6 +9,8 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     Optional<Shop> findByUsername(String username);
 
+    Optional<Shop> findByEmail(String email);   // ✅ ADD THIS
+
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);

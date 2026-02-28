@@ -1,16 +1,18 @@
 package com.QuipBill_server.QuipBill.modules.authentication.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "users",
-       uniqueConstraints = {
-           @UniqueConstraint(columnNames = "username"),
-           @UniqueConstraint(columnNames = "email")
-       })
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "username"),
+                @UniqueConstraint(columnNames = "email")
+        })
 public class Shop {
 
     @Id
@@ -25,6 +27,7 @@ public class Shop {
     @Column(nullable = false, length = 150)
     private String email;
 
+    @JsonIgnore   // 🔥 Never expose password in API
     @Column(nullable = false)
     private String password;
 
@@ -37,35 +40,57 @@ public class Shop {
     private String address;
 
     private Double latitude;
-
     private Double longitude;
+
+    // ================= OTP FIELDS =================
+
+    @Column(length = 10)
+    private String otp;
+
+    private LocalDateTime otpExpiry;
+
+    @Column(name = "is_verified")
+    private Boolean verified = false;
 
     // ================= SYSTEM FIELDS =================
 
     @Column(name = "is_active")
     private Boolean active = true;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     // ================= ROLES =================
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();
 
-    // ================= CONSTRUCTOR =================
+    // ================= CONSTRUCTORS =================
 
     public Shop() {}
 
-    // ================= UTILITY =================
+    // ================= LIFECYCLE =================
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // ================= UTILITY METHODS =================
 
     public void addRole(Role role) {
         this.roles.add(role);
+        role.getUsers().add(this);   // 🔥 Keep both sides synced
+    }
+
+    public void removeRole(Role role) {
+        this.roles.remove(role);
+        role.getUsers().remove(this);
     }
 
     // ================= GETTERS & SETTERS =================
@@ -94,7 +119,6 @@ public class Shop {
         return password;
     }
 
-    // ✅ REQUIRED FOR ENCODING PASSWORD
     public void setPassword(String password) {
         this.password = password;
     }
@@ -103,7 +127,6 @@ public class Shop {
         return shopName;
     }
 
-    // ✅ REQUIRED
     public void setShopName(String shopName) {
         this.shopName = shopName;
     }
@@ -112,7 +135,6 @@ public class Shop {
         return address;
     }
 
-    // ✅ REQUIRED
     public void setAddress(String address) {
         this.address = address;
     }
@@ -121,7 +143,6 @@ public class Shop {
         return latitude;
     }
 
-    // ✅ REQUIRED
     public void setLatitude(Double latitude) {
         this.latitude = latitude;
     }
@@ -130,7 +151,6 @@ public class Shop {
         return longitude;
     }
 
-    // ✅ REQUIRED
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
     }
@@ -145,5 +165,33 @@ public class Shop {
 
     public Set<Role> getRoles() {
         return roles;
+    }
+
+    public String getOtp() {
+        return otp;
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
+    }
+
+    public LocalDateTime getOtpExpiry() {
+        return otpExpiry;
+    }
+
+    public void setOtpExpiry(LocalDateTime otpExpiry) {
+        this.otpExpiry = otpExpiry;
+    }
+
+    public Boolean getVerified() {
+        return verified;
+    }
+
+    public void setVerified(Boolean verified) {
+        this.verified = verified;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 }
