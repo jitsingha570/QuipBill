@@ -6,6 +6,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,6 +15,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -21,14 +28,15 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // 🔥 allow auth APIs
-                .anyRequest().permitAll() // 🔥 temporarily allow everything for testing
+                .requestMatchers("/api/auth/register", "/api/auth/verify-otp", "/api/auth/login").permitAll() // 🔥 allow auth APIs
+                .anyRequest().authenticated()
             )
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .httpBasic(httpBasic -> httpBasic.disable()) // 🔥 disable default login
-            .formLogin(form -> form.disable()); // 🔥 disable form login
+            .formLogin(form -> form.disable()) // 🔥 disable form login
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -38,3 +46,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+

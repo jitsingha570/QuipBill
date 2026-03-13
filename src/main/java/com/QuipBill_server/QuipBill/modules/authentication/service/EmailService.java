@@ -1,6 +1,8 @@
 package com.QuipBill_server.QuipBill.modules.authentication.service;
 
+import com.QuipBill_server.QuipBill.common.exception.ApiException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,7 @@ public class EmailService {
 
         // Validate null
         if (toEmail == null) {
-            throw new IllegalArgumentException("Email cannot be null");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Email cannot be null");
         }
 
         // Trim spaces
@@ -37,7 +39,7 @@ public class EmailService {
 
         // Validate format
         if (!EMAIL_PATTERN.matcher(toEmail).matches()) {
-            throw new IllegalArgumentException("Invalid email format: " + toEmail);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid email format: " + toEmail);
         }
 
         try {
@@ -59,7 +61,7 @@ public class EmailService {
             mailSender.send(message);
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send OTP email: " + e.getMessage(), e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send OTP email");
         }
     }
 }

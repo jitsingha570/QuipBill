@@ -6,8 +6,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;// Used for 
 
 //===== importing classes from our project =====
 import com.QuipBill_server.QuipBill.modules.authentication.dto.RegisterRequest;
+import com.QuipBill_server.QuipBill.modules.authentication.dto.RegisterResponse;
 import com.QuipBill_server.QuipBill.modules.authentication.dto.LoginRequest;
 import com.QuipBill_server.QuipBill.modules.authentication.dto.AuthResponse;
+import com.QuipBill_server.QuipBill.modules.authentication.dto.VerifyOtpResponse;
+import com.QuipBill_server.QuipBill.modules.authentication.dto.ShopProfileResponse;
+import com.QuipBill_server.QuipBill.modules.authentication.dto.ShopProfileUpdateRequest;
 import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
 import com.QuipBill_server.QuipBill.modules.authentication.repository.RoleRepository;
 import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
@@ -15,7 +19,7 @@ import com.QuipBill_server.QuipBill.modules.authentication.entity.Role;
 import com.QuipBill_server.QuipBill.modules.authentication.entity.RoleName;
 import com.QuipBill_server.QuipBill.modules.authentication.security.JwtUtil;
 import com.QuipBill_server.QuipBill.modules.authentication.exception.CustomException;
-import com.QuipBill_server.QuipBill.modules.authentication.service.EmailService;
+
 //===== importing other necessary classes =====
 import java.util.Set; // Used for handling collections of roles assigned to a shop
 import java.util.Optional;
@@ -51,11 +55,11 @@ public class ShopAuthService {
     // ===============================
     // REGISTER (Send OTP)
     // ===============================
-   public String register(RegisterRequest request) {
+   public RegisterResponse register(RegisterRequest request) {
 
     validateRegisterRequest(request);
 
-    String email = request.getEmail().trim().toLowerCase();
+    String email = normalizeEmail(request.getEmail(), "Email is required");
 
     Optional<Shop> existingShopOpt = shopRepository.findByEmail(email);
 
@@ -77,17 +81,14 @@ public class ShopAuthService {
         shopRepository.save(existingShop);
         emailService.sendOtpEmail(existingShop.getEmail(), otp);
 
-        return "OTP resent to your email";
+        return new RegisterResponse(true, "OTP resent to your email", existingShop.getEmail());
     }
 
     // 🆕 NEW USER REGISTRATION
     Shop shop = new Shop();
-    shop.setUsername(request.getUsername().trim());
     shop.setEmail(email);
     shop.setShopName(request.getShopName());
     shop.setAddress(request.getAddress());
-    shop.setLatitude(request.getLatitude());
-    shop.setLongitude(request.getLongitude());
     shop.setPassword(passwordEncoder.encode(request.getPassword()));
     shop.setVerified(false);
 
@@ -106,15 +107,20 @@ public class ShopAuthService {
 
     emailService.sendOtpEmail(shop.getEmail(), otp);
 
-    return "OTP sent to your email";
+    return new RegisterResponse(true, "OTP sent to your email", shop.getEmail());
 }
 
   // ===============================
     // VERIFY OTP
     // ===============================
-  public AuthResponse verifyOtp(String username, String otp) {
+  public VerifyOtpResponse verifyOtp(String emailInput, String otp) {
 
-    Shop shop = shopRepository.findByUsername(username)
+    String email = normalizeEmail(emailInput, "Email is required");
+    if (otp == null || otp.trim().isEmpty()) {
+        throw new CustomException("OTP is required");
+    }
+
+    Shop shop = shopRepository.findByEmail(email)
             .orElseThrow(() -> new CustomException("User not found"));
 
     if (Boolean.TRUE.equals(shop.getVerified()))
@@ -136,11 +142,13 @@ public class ShopAuthService {
 
     shopRepository.save(shop);
 
-    String token = jwtUtil.generateToken(shop.getUsername());
+    String token = jwtUtil.generateToken(shop.getEmail());
 
-    return new AuthResponse(
-            token,
-            shop.getUsername(),
+    return new VerifyOtpResponse(
+            true,
+            "OTP verified successfully",
+           // token,
+            shop.getEmail(),
             getRoleNames(shop)
     );
 }    // ===============================
@@ -148,7 +156,15 @@ public class ShopAuthService {
     // ===============================
     public AuthResponse login(LoginRequest request) {
 
-        Shop shop = shopRepository.findByUsername(request.getUsername())
+        if (request == null) {
+            throw new CustomException("Login request cannot be null");
+        }
+        String email = normalizeEmail(request.getEmail(), "Email is required");
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new CustomException("Password is required");
+        }
+
+        Shop shop = shopRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException("Invalid credentials"));
 
         if (!passwordEncoder.matches(request.getPassword(), shop.getPassword()))
@@ -157,13 +173,56 @@ public class ShopAuthService {
         if (!Boolean.TRUE.equals(shop.getVerified()))
             throw new CustomException("Please verify your account first");
 
-        String token = jwtUtil.generateToken(shop.getUsername());
+        String token = jwtUtil.generateToken(shop.getEmail());
 
         return new AuthResponse(
                 token,
-                shop.getUsername(),
+                shop.getId(),
+                shop.getEmail(),
                 getRoleNames(shop)
         );
+    }
+
+    // ===============================
+    // PROFILE
+    // ===============================
+    public ShopProfileResponse getProfile(Long shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new CustomException("User not found"));
+
+        return mapToProfile(shop);
+    }
+
+    public ShopProfileResponse updateProfile(Long shopId, ShopProfileUpdateRequest request) {
+        if (request == null) {
+            throw new CustomException("Profile update request cannot be null");
+        }
+
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new CustomException("User not found"));
+
+        if (request.getMobileNumber() != null) {
+            shop.setMobileNumber(request.getMobileNumber().trim());
+        }
+        if (request.getDashboardPin() != null) {
+            shop.setDashboardPin(request.getDashboardPin().trim());
+        }
+        if (request.getShopName() != null) {
+            shop.setShopName(request.getShopName().trim());
+        }
+        if (request.getShopOwnerName() != null) {
+            shop.setShopOwnerName(request.getShopOwnerName().trim());
+        }
+        if (request.getAddress() != null) {
+            shop.setAddress(request.getAddress().trim());
+        }
+        if (request.getPincode() != null) {
+            shop.setPincode(request.getPincode().trim());
+        }
+
+        Shop saved = shopRepository.save(shop);
+
+        return mapToProfile(saved);
     }
 
     // ===============================
@@ -176,13 +235,15 @@ public class ShopAuthService {
 
     private void validateRegisterRequest(RegisterRequest request) {
 
-    String username = request.getUsername().trim();
-    String email = request.getEmail().trim().toLowerCase();
-
-    Optional<Shop> existingByUsername = shopRepository.findByUsername(username);
-    if (existingByUsername.isPresent() &&
-            Boolean.TRUE.equals(existingByUsername.get().getVerified())) {
-        throw new CustomException("Username already exists");
+    if (request == null) {
+        throw new CustomException("Register request cannot be null");
+    }
+    String email = normalizeEmail(request.getEmail(), "Email is required");
+    if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+        throw new CustomException("Password is required");
+    }
+    if (request.getShopName() == null || request.getShopName().trim().isEmpty()) {
+        throw new CustomException("Shop name is required");
     }
 
     Optional<Shop> existingByEmail = shopRepository.findByEmail(email);
@@ -195,6 +256,13 @@ public class ShopAuthService {
         throw new CustomException("Password must be at least 6 characters");
 }
 
+   private String normalizeEmail(String email, String errorMessage) {
+    if (email == null || email.trim().isEmpty()) {
+        throw new CustomException(errorMessage);
+    }
+    return email.trim().toLowerCase();
+   }
+
 
    private Set<String> getRoleNames(Shop shop) {
     return shop.getRoles()
@@ -202,4 +270,17 @@ public class ShopAuthService {
             .map(role -> role.getName().name())  // ✅ convert enum to String
             .collect(Collectors.toSet());
 }
-}
+
+   private ShopProfileResponse mapToProfile(Shop shop) {
+    return new ShopProfileResponse(
+            shop.getId(),
+            shop.getEmail(),
+            shop.getMobileNumber(),
+            shop.getShopName(),
+            shop.getShopOwnerName(),
+            shop.getAddress(),
+            shop.getPincode()
+    );
+   }
+} 
+

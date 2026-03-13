@@ -1,19 +1,26 @@
 package com.QuipBill_server.QuipBill.modules.authentication.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class VerifyOtpRequest {
 
-    private String username;
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    private String email;
+
+    @NotBlank(message = "OTP is required")
     private String otp;
 
     public VerifyOtpRequest() {
     }
 
-    public String getUsername() {
-        return username;
+    public String getEmail() {
+        return email;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getOtp() {
