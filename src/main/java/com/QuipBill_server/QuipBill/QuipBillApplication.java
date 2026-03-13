@@ -2,7 +2,7 @@ package com.QuipBill_server.QuipBill;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
+//redeploy
 @SpringBootApplication
 public class QuipBillApplication {
 
