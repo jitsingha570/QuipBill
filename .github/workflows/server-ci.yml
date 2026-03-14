@@ -1,0 +1,31 @@
+name: QuipBill Server CI
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+      - main
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build Project
+        run: mvn clean install
+
+      - name: Run Tests
+        run: mvn test
