@@ -44,7 +44,7 @@ public class Shop {
     @Column(name = "shop_name", nullable = false)
     private String shopName;
 
-    @Column(name = "shopOwner_name", length = 100)
+    @Column(name = "shop_owner_name", length = 100)
     private String shopOwnerName;
 
     @Column(length = 500)

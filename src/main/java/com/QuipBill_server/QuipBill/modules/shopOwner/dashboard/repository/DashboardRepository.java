@@ -78,4 +78,30 @@ public interface DashboardRepository extends JpaRepository<Bill, Long> {
     """)
     Integer getYearlyBills(@Param("shopId") Long shopId,
                            @Param("year") int year);
+
+
+    // 7️⃣ Yearly GST total amount
+    @Query("""
+        SELECT SUM(bi.gstAmount)
+        FROM BillItem bi
+        JOIN bi.bill b
+        WHERE b.shopId = :shopId
+        AND YEAR(b.createdAt) = :year
+        AND bi.gstEnabled = true
+    """)
+    Double getYearlyGstAmount(@Param("shopId") Long shopId,
+                              @Param("year") int year);
+
+
+    // 8️⃣ Yearly bill count with GST
+    @Query("""
+        SELECT COUNT(DISTINCT b)
+        FROM BillItem bi
+        JOIN bi.bill b
+        WHERE b.shopId = :shopId
+        AND YEAR(b.createdAt) = :year
+        AND bi.gstEnabled = true
+    """)
+    Integer getYearlyGstBills(@Param("shopId") Long shopId,
+                              @Param("year") int year);
 }

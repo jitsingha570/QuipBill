@@ -43,6 +43,12 @@ public class DashboardServiceImpl implements DashboardService {
         Integer yearlyBills = dashboardRepository.getYearlyBills(
                 shopId, today.getYear());
 
+        Double yearlyGstAmount = dashboardRepository.getYearlyGstAmount(
+                shopId, today.getYear());
+
+        Integer yearlyGstBills = dashboardRepository.getYearlyGstBills(
+                shopId, today.getYear());
+
         return DashboardSummaryResponse.builder()
                 .todaySales(todaySales == null ? 0 : todaySales)
                 .todayBills(todayBills == null ? 0 : todayBills)
@@ -50,6 +56,8 @@ public class DashboardServiceImpl implements DashboardService {
                 .monthlyBills(monthlyBills == null ? 0 : monthlyBills)
                 .yearlySales(yearlySales == null ? 0 : yearlySales)
                 .yearlyBills(yearlyBills == null ? 0 : yearlyBills)
+                .yearlyGstAmount(yearlyGstAmount == null ? 0 : yearlyGstAmount)
+                .yearlyGstBills(yearlyGstBills == null ? 0 : yearlyGstBills)
                 .build();
     }
 
