@@ -1,5 +1,6 @@
 package com.QuipBill_server.QuipBill.modules.authentication.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -12,19 +13,21 @@ public class RegisterRequest {
     private String email;
     @NotBlank(message = "Mobile number is required")
     @Size(min = 10, max = 10, message = "Mobile number must be 10 digits")
-
+    @JsonAlias({"mobile_number"})
     private String mobileNumber;
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
     @NotBlank(message = "Dashboard PIN is required")
     @Size(min = 6, max = 6, message = "Dashboard PIN must be 6 digits")
+    @JsonAlias({"dashboard_pin"})
     private String dashboardPin;
 
 
     @NotBlank(message = "Shop name is required")
     private String shopName;
     @NotBlank(message = "Shop owner name is required")
+    @JsonAlias({"shop_owner_name"})
     private String shopOwnerName;
     @NotBlank(message = "Address is required")
     private String address;

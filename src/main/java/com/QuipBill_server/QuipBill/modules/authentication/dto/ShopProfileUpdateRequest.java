@@ -1,10 +1,15 @@
 package com.QuipBill_server.QuipBill.modules.authentication.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 public class ShopProfileUpdateRequest {
 
+    @JsonAlias({"mobile_number"})
     private String mobileNumber;
+    @JsonAlias({"dashboard_pin"})
     private String dashboardPin;
     private String shopName;
+    @JsonAlias({"shop_owner_name"})
     private String shopOwnerName;
     private String address;
     private String pincode;
