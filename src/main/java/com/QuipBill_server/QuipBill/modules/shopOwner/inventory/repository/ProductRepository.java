@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+    // Existing methods ✅
     Optional<Product> findByBarcode(String barcode);
 
     List<Product> findByShop_Id(Long shopId);
@@ -19,4 +20,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Optional<Product> findByProductNameAndShop_Id(String productName, Long shopId);
 
+    // 🔥 NEW: Search for billing (AUTO-SUGGESTION)
+
+    // ⚡ FAST (Recommended)
+    List<Product> findTop10ByProductNameStartingWithIgnoreCaseAndShop_Id(
+            String keyword, Long shopId
+    );
+
+    // 🔍 OPTIONAL (Flexible but slower)
+    List<Product> findTop10ByProductNameContainingIgnoreCaseAndShop_Id(
+            String keyword, Long shopId
+    );
 }

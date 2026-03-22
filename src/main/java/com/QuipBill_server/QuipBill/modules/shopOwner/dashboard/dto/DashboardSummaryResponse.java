@@ -17,4 +17,7 @@ public class DashboardSummaryResponse {
 
     private Double yearlySales;
     private Integer yearlyBills;
+
+    private Double yearlyGstAmount;
+    private Integer yearlyGstBills;
 }

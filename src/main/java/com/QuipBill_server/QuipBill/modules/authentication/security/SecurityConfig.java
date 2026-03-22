@@ -28,7 +28,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/register", "/api/auth/verify-otp", "/api/auth/login").permitAll() // 🔥 allow auth APIs
+                .requestMatchers("/api/auth/register", "/api/auth/verify-otp", "/api/auth/login", "/api/health").permitAll() // 🔥 allow public APIs
                 .anyRequest().authenticated()
             )
             .sessionManagement(session ->
@@ -46,4 +46,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+
+
 

@@ -11,7 +11,7 @@ public interface BillingService {
 
     BillResponse generateBill(BillRequest request, Long shopId);
 
-    PrintableBillResponse printBill(BillRequest request, Long shopId);
+    PrintableBillResponse printBill(Long billId, Long shopId);
 
     BillResponse getBillById(Long billId, Long shopId);
 

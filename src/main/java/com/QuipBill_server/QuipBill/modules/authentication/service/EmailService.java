@@ -1,69 +1,92 @@
 package com.QuipBill_server.QuipBill.modules.authentication.service;
 
+import com.QuipBill_server.QuipBill.common.exception.ApiException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 public class EmailService {
 
-    @Value("${BREVO_API_KEY}")
+    @Value("${app.brevo.api-key}")
     private String apiKey;
 
-    @Value("${EMAIL_SENDER_EMAIL}")
+    @Value("${app.email.sender-email}")
     private String senderEmail;
 
-    @Value("${EMAIL_SENDER_NAME}")
+    @Value("${app.email.sender-name}")
     private String senderName;
 
     private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
     public void sendOtpEmail(String toEmail, String otp) {
 
-        RestTemplate restTemplate = new RestTemplate();
+        if (toEmail == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Email cannot be null");
+        }
 
-        Map<String, Object> sender = new HashMap<>();
-        sender.put("email", senderEmail);
-        sender.put("name", senderName);
+        toEmail = toEmail.trim();
 
-        Map<String, String> to = new HashMap<>();
-        to.put("email", toEmail);
+        if (!EMAIL_PATTERN.matcher(toEmail).matches()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid email format: " + toEmail);
+        }
 
-        List<Map<String, String>> toList = new ArrayList<>();
-        toList.add(to);
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Email API key is not configured");
+        }
+        if (senderEmail == null || senderEmail.isBlank()) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Sender email is not configured");
+        }
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("sender", sender);
-        body.put("to", toList);
-        body.put("subject", "QuipBill OTP Verification");
+        try {
+            Map<String, Object> sender = new HashMap<>();
+            sender.put("email", senderEmail);
+            sender.put("name", senderName);
 
-        body.put(
-                "htmlContent",
-                "<h2>QuipBill Verification</h2>"
-                + "<p>Your OTP is:</p>"
-                + "<h1 style='color:green'>" + otp + "</h1>"
-                + "<p>This OTP expires in 5 minutes.</p>"
-        );
+            Map<String, String> recipient = new HashMap<>();
+            recipient.put("email", toEmail);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key", apiKey);
+            List<Map<String, String>> toList = new ArrayList<>();
+            toList.add(recipient);
 
-        HttpEntity<Map<String, Object>> request =
-                new HttpEntity<>(body, headers);
+            Map<String, Object> body = new HashMap<>();
+            body.put("sender", sender);
+            body.put("to", toList);
+            body.put("subject", "QuipBill - Email Verification OTP");
+            body.put(
+                    "htmlContent",
+                    "<p>Dear Shop Owner,</p>"
+                    + "<p>Your OTP for <b>QuipBill email verification</b> is:</p>"
+                    + "<h2>" + otp + "</h2>"
+                    + "<p>This OTP is valid for <b>5 minutes</b>.</p>"
+                    + "<p>Do not share this OTP with anyone.</p>"
+                    + "<br>"
+                    + "<p>Regards,<br>QuipBill Team</p>"
+            );
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                BREVO_URL,
-                HttpMethod.POST,
-                request,
-                String.class
-        );
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
 
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Failed to send OTP email via Brevo");
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.postForEntity(BREVO_URL, request, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send OTP email");
+            }
+
+        } catch (Exception e) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to send OTP email: " + e.getMessage());
         }
     }
 }

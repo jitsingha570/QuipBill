@@ -82,12 +82,10 @@ public class BillingServiceImpl implements BillingService {
     }
 
     @Override
-    public PrintableBillResponse printBill(BillRequest request, Long shopId) {
-
-        BillResponse response = generateBill(request, shopId);
+    public PrintableBillResponse printBill(Long billId, Long shopId) {
 
         Bill bill = billRepository
-                .findByIdAndShopId(response.getBillId(), shopId)
+                .findByIdAndShopId(billId, shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Bill not found"));
 
         return printService.preparePrintableBill(bill);

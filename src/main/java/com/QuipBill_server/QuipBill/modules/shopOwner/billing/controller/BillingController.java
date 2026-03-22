@@ -35,16 +35,16 @@ public class BillingController {
     }
 
     // Print Bill
-    @PostMapping("/print")
+    @GetMapping("/print/{billId}")
     public ResponseEntity<PrintableBillResponse> printBill(
-            @jakarta.validation.Valid @RequestBody BillRequest request,
+            @PathVariable Long billId,
             Authentication authentication
     ) {
 
         Long shopId = Long.parseLong(authentication.getName());
 
         return ResponseEntity.ok(
-                billingService.printBill(request, shopId)
+                billingService.printBill(billId, shopId)
         );
     }
 
