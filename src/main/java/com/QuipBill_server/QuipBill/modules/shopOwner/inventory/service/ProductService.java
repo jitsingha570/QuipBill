@@ -3,6 +3,7 @@ package com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service;
 import com.QuipBill_server.QuipBill.common.exception.ApiException;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductResponse;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductSearchResponse;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.entity.Product;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.repository.ProductRepository;
 import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
 
-    // Create product manually
+    // Create product
     public ProductResponse createProduct(ProductRequest request) {
 
         Shop shop = shopRepository.findById(request.getShopId())
@@ -39,21 +39,32 @@ public class ProductService {
                 .stockQuantity(request.getQuantity() != null ? request.getQuantity() : 0)
                 .build();
 
-        Product saved = productRepository.save(product);
-
-        return mapToResponse(saved);
+        return mapToResponse(productRepository.save(product));
     }
 
     // Get all products
     public List<ProductResponse> getAllProducts(Long shopId) {
-
         return productRepository.findByShop_Id(shopId)
                 .stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    // Get product by ID
+    // 🔍 SEARCH API (UPDATED 🔥)
+    public List<ProductSearchResponse> searchProducts(String keyword, Long shopId) {
+
+        if (keyword == null || keyword.trim().length() < 2) {
+            return List.of();
+        }
+
+        return productRepository
+                .findTop10ByProductNameStartingWithIgnoreCaseAndShop_Id(keyword.trim(), shopId)
+                .stream()
+                .map(this::mapToSearchResponse)
+                .toList();
+    }
+
+    // Get by ID
     public ProductResponse getProductById(Long productId) {
 
         Product product = productRepository.findById(productId)
@@ -62,14 +73,15 @@ public class ProductService {
         return mapToResponse(product);
     }
 
-    // Update product
+    // Update
     public ProductResponse updateProduct(Long productId, ProductRequest request) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        if (request.getShopId() != null && !request.getShopId().equals(product.getShop().getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Shop mismatch for product");
+        if (request.getShopId() != null &&
+                !request.getShopId().equals(product.getShop().getId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Shop mismatch");
         }
 
         product.setProductName(request.getProductName());
@@ -77,16 +89,15 @@ public class ProductService {
         product.setPrice(request.getPrice());
         product.setGstPercent(request.getGstPercent());
         product.setGstEnabled(request.getGstEnabled());
+
         if (request.getQuantity() != null) {
             product.setStockQuantity(request.getQuantity());
         }
 
-        Product updated = productRepository.save(product);
-
-        return mapToResponse(updated);
+        return mapToResponse(productRepository.save(product));
     }
 
-    // Delete product
+    // Delete
     @Transactional
     public void deleteProduct(Long productId) {
 
@@ -96,7 +107,7 @@ public class ProductService {
         productRepository.delete(product);
     }
 
-    // Mapper
+    // 🔄 Mapper → Full response
     private ProductResponse mapToResponse(Product product) {
 
         return ProductResponse.builder()
@@ -109,5 +120,18 @@ public class ProductService {
                 .gstEnabled(product.getGstEnabled())
                 .quantity(product.getStockQuantity())
                 .build();
+    }
+
+    // 🔄 Mapper → Search response (LIGHTWEIGHT 🔥)
+    private ProductSearchResponse mapToSearchResponse(Product product) {
+
+        return new ProductSearchResponse(
+                product.getProductId(),
+                product.getProductName(),
+                product.getPrice(),
+                product.getGstPercent(),
+                product.getGstEnabled(),
+                product.getStockQuantity()
+        );
     }
 }

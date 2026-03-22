@@ -2,6 +2,7 @@ package com.QuipBill_server.QuipBill.modules.shopOwner.inventory.controller;
 
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductResponse;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductSearchResponse;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service.ProductService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,20 @@ public class ProductController {
     @GetMapping
     public List<ProductResponse> getAllProducts(@RequestParam Long shopId) {
         return productService.getAllProducts(shopId);
+    }
+
+    // 🔍 Search products (Auto-suggestion for billing)
+    @GetMapping("/search")
+    public List<ProductSearchResponse> searchProducts(
+            @RequestParam String keyword,
+            @RequestParam Long shopId) {
+
+        // ✅ Avoid unnecessary DB calls
+        if (keyword == null || keyword.trim().length() < 2) {
+            return List.of();
+        }
+
+        return productService.searchProducts(keyword.trim(), shopId);
     }
 
     // Get product by ID

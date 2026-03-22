@@ -6,6 +6,8 @@ import com.QuipBill_server.QuipBill.modules.shopOwner.billing.dto.BillRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.InventoryResponse;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.entity.Product;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.repository.ProductRepository;
+import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
+import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ import java.util.List;
 public class InventoryService {
 
     private final ProductRepository productRepository;
+    private final ShopRepository shopRepository;
 
     // Add stock
     public InventoryResponse addStock(Long productId, Long shopId, int quantity) {
@@ -81,11 +84,11 @@ public class InventoryService {
             Product product = findProductForBilling(item, shopId);
 
             int currentQty = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
-            if (currentQty < item.getQuantity()) {
-                throw new ApiException(HttpStatus.CONFLICT, "Insufficient stock");
+            int newQty = currentQty;
+            if (currentQty > 0 && item.getQuantity() != null && item.getQuantity() > 0) {
+                newQty = Math.max(0, currentQty - item.getQuantity());
             }
-
-            product.setStockQuantity(currentQty - item.getQuantity());
+            product.setStockQuantity(newQty);
             Product saved = productRepository.save(product);
             responses.add(mapToResponse(saved));
         }
@@ -97,20 +100,47 @@ public class InventoryService {
         if (item.getProductId() != null) {
             return productRepository
                     .findByProductIdAndShop_Id(item.getProductId(), shopId)
-                    .orElseGet(() -> findByExactName(item.getProductName(), shopId));
+                    .orElseGet(() -> findOrCreateByName(item, shopId));
         }
 
-        return findByExactName(item.getProductName(), shopId);
+        return findOrCreateByName(item, shopId);
     }
 
-    private Product findByExactName(String productName, Long shopId) {
+    private Product findOrCreateByName(BillItemRequest item, Long shopId) {
+        String productName = item.getProductName();
         if (productName == null || productName.isBlank()) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Product not found");
         }
 
         return productRepository
                 .findByProductNameAndShop_Id(productName.trim(), shopId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+                .orElseGet(() -> createProductFromBillItem(item, shopId));
+    }
+
+    private Product createProductFromBillItem(BillItemRequest item, Long shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
+
+        Double gstPercent = item.getGstPercent();
+        Boolean gstEnabled = item.getGstEnabled();
+        if (gstPercent == null || gstPercent <= 0) {
+            gstPercent = 0.0;
+            gstEnabled = false;
+        } else if (gstEnabled == null) {
+            gstEnabled = true;
+        }
+
+        Product product = Product.builder()
+                .shop(shop)
+                .productName(item.getProductName().trim())
+                .barcode(null)
+                .price(item.getPrice())
+                .gstPercent(gstPercent)
+                .gstEnabled(gstEnabled)
+                .stockQuantity(item.getQuantity() != null ? item.getQuantity() : 0)
+                .build();
+
+        return productRepository.save(product);
     }
 
     private InventoryResponse mapToResponse(Product product) {
