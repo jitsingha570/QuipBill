@@ -3,20 +3,31 @@ package com.QuipBill_server.QuipBill.modules.shopOwner.billing.service;
 import com.QuipBill_server.QuipBill.modules.shopOwner.billing.dto.PrintableBillResponse;
 import com.QuipBill_server.QuipBill.modules.shopOwner.billing.entity.Bill;
 import com.QuipBill_server.QuipBill.modules.shopOwner.billing.entity.BillItem;
+import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
+import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
+import com.QuipBill_server.QuipBill.common.exception.ApiException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class PrintService {
+
+    private final ShopRepository shopRepository;
 
     public PrintableBillResponse preparePrintableBill(Bill bill) {
 
+        Shop shop = shopRepository.findById(bill.getShopId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
+
         return PrintableBillResponse.builder()
                 .billId(bill.getId())
-                .shopName("QuipBill Store") // Later fetch from Shop table
-                .shopAddress("Your Shop Address")
-                .shopPhone("9999999999")
+                .shopName(shop.getShopName())
+                .shopAddress(shop.getAddress())
+                .shopPhone(shop.getMobileNumber())
                 .customerName(bill.getCustomerName())
                 .createdAt(bill.getCreatedAt())
                 .items(
