@@ -1,24 +1,39 @@
 package com.QuipBill_server.QuipBill.modules.authentication.dto;
-//this file use for send response to client after login or register or verify otp
+
 import java.util.Set;
 
 public class AuthResponse {
 
-    private String token;
+    private String accessToken;   // 🔥 NEW
+    private String refreshToken;  // 🔥 NEW
     private Long shopId;
     private String username;
-    
     private Set<String> roles;
 
-    public AuthResponse(String token, Long shopId, String username, Set<String> roles) {
-        this.token = token;
+    // 🔥 UPDATED CONSTRUCTOR
+    public AuthResponse(String accessToken,
+                        String refreshToken,
+                        Long shopId,
+                        String username,
+                        Set<String> roles) {
+
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
         this.shopId = shopId;
         this.username = username;
         this.roles = roles;
     }
 
-    public String getToken() {
-        return token;
+    // ===============================
+    // GETTERS
+    // ===============================
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
     }
 
     public Long getShopId() {
@@ -28,8 +43,6 @@ public class AuthResponse {
     public String getUsername() {
         return username;
     }
-
-
 
     public Set<String> getRoles() {
         return roles;
