@@ -58,9 +58,10 @@ public class InventoryService {
     }
 
     // Get stock
-    public InventoryResponse getStock(Long productId) {
+    public InventoryResponse getStock(Long productId, Long shopId) {
 
-        Product product = productRepository.findById(productId)
+        Product product = productRepository
+                .findByProductIdAndShop_Id(productId, shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
 
         return mapToResponse(product);

@@ -1,0 +1,55 @@
+package com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service;
+
+import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
+import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductRequest;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.entity.Product;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.repository.ProductRepository;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class ProductServiceTest {
+
+    @Test
+    void createProduct_usesAuthenticatedShopId_notRequestShopId() {
+        ProductRepository productRepository = mock(ProductRepository.class);
+        ShopRepository shopRepository = mock(ShopRepository.class);
+
+        ProductService service = new ProductService(productRepository, shopRepository);
+
+        Long authenticatedShopId = 10L;
+        Long requestShopId = 999L;
+
+        Shop shop = new Shop();
+        shop.setEmail("test@example.com");
+        shop.setPassword("x");
+        shop.setShopName("Shop");
+
+        when(shopRepository.findById(authenticatedShopId)).thenReturn(Optional.of(shop));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productRepository.findByBarcodeAndShop_Id("123", authenticatedShopId)).thenReturn(Optional.empty());
+
+        ProductRequest request = ProductRequest.builder()
+                .shopId(requestShopId)
+                .productName("P")
+                .barcode("123")
+                .price(10.0)
+                .quantity(1)
+                .build();
+
+        service.createProduct(authenticatedShopId, request);
+
+        verify(shopRepository).findById(authenticatedShopId);
+        verify(shopRepository, never()).findById(requestShopId);
+
+        ArgumentCaptor<Product> saved = ArgumentCaptor.forClass(Product.class);
+        verify(productRepository).save(saved.capture());
+        assertSame(shop, saved.getValue().getShop());
+    }
+}
+

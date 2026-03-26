@@ -5,6 +5,7 @@ import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.BarcodeGener
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service.BarcodeGeneratorService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,8 +17,10 @@ public class BarcodeGeneratorController {
 
     @PostMapping("/generate")
     public BarcodeGenerateResponse generateBarcode(
-            @RequestBody BarcodeGenerateRequest request) {
+            @RequestBody BarcodeGenerateRequest request,
+            Authentication authentication) {
 
-        return barcodeGeneratorService.generate(request);
+        Long shopId = Long.parseLong(authentication.getName());
+        return barcodeGeneratorService.generate(shopId, request);
     }
 }

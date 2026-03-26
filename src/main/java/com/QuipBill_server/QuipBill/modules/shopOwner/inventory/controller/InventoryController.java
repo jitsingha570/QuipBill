@@ -6,6 +6,7 @@ import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.InventoryRes
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service.InventoryService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,30 +20,40 @@ public class InventoryController {
 
     // Add stock
     @PutMapping("/add")
-    public InventoryResponse addStock(@RequestBody InventoryRequest request) {
+    public InventoryResponse addStock(
+            @RequestBody InventoryRequest request,
+            Authentication authentication) {
 
-        return inventoryService.addStock(request.getProductId(), request.getShopId(), request.getQuantity());
+        Long shopId = Long.parseLong(authentication.getName());
+        return inventoryService.addStock(request.getProductId(), shopId, request.getQuantity());
     }
 
     // Reduce stock
     @PutMapping("/reduce")
-    public InventoryResponse reduceStock(@RequestBody InventoryRequest request) {
+    public InventoryResponse reduceStock(
+            @RequestBody InventoryRequest request,
+            Authentication authentication) {
 
-        return inventoryService.reduceStock(request.getProductId(), request.getShopId(), request.getQuantity());
+        Long shopId = Long.parseLong(authentication.getName());
+        return inventoryService.reduceStock(request.getProductId(), shopId, request.getQuantity());
     }
 
     // Reduce stock by billing items
     @PutMapping("/reduce-by-billing")
     public List<InventoryResponse> reduceStockByBilling(
-            @RequestParam Long shopId,
-            @RequestBody BillRequest request) {
+            @RequestBody BillRequest request,
+            Authentication authentication) {
 
+        Long shopId = Long.parseLong(authentication.getName());
         return inventoryService.reduceStockByBilling(request, shopId);
     }
 
     // Get stock
     @GetMapping("/{productId}")
-    public InventoryResponse getStock(@PathVariable Long productId) {
-        return inventoryService.getStock(productId);
+    public InventoryResponse getStock(
+            @PathVariable Long productId,
+            Authentication authentication) {
+        Long shopId = Long.parseLong(authentication.getName());
+        return inventoryService.getStock(productId, shopId);
     }
 }

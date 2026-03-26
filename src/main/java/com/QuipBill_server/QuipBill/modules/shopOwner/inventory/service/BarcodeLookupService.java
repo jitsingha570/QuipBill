@@ -22,14 +22,14 @@ public class BarcodeLookupService {
 
     private final ProductRepository productRepository;
 
-    public BarcodeLookupResponse lookup(String barcode) {
+    public BarcodeLookupResponse lookup(Long shopId, String barcode) {
 
         if (barcode == null || barcode.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Barcode is required");
         }
 
         // Check product in local DB
-        Optional<Product> productOpt = productRepository.findByBarcode(barcode);
+        Optional<Product> productOpt = productRepository.findByBarcodeAndShop_Id(barcode, shopId);
 
         if (productOpt.isPresent()) {
 

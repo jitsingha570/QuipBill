@@ -20,12 +20,12 @@ public class BarcodeGeneratorService {
     private final BarcodeLabelService barcodeLabelService;
     private final ShopRepository shopRepository;
 
-    public BarcodeGenerateResponse generate(BarcodeGenerateRequest request) {
+    public BarcodeGenerateResponse generate(Long shopId, BarcodeGenerateRequest request) {
 
         // Generate unique barcode
         String barcode = "900" + System.currentTimeMillis();
 
-        Shop shop = shopRepository.findById(request.getShopId())
+        Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
 
         Product product = Product.builder()
