@@ -199,6 +199,12 @@ public class ShopAuthService {
         if (request.getMobileNumber() != null)
             shop.setMobileNumber(request.getMobileNumber());
 
+        if (request.getDashboardPin() != null)
+            shop.setDashboardPin(request.getDashboardPin());
+
+        if (request.getShopOwnerName() != null)
+            shop.setShopOwnerName(request.getShopOwnerName());
+
         if (request.getAddress() != null)
             shop.setAddress(request.getAddress());
 
@@ -228,6 +234,11 @@ public class ShopAuthService {
         if (request.getPassword() != null)
             shop.setPassword(passwordEncoder.encode(request.getPassword()));
         shop.setShopName(request.getShopName());
+        shop.setMobileNumber(request.getMobileNumber());
+        shop.setDashboardPin(request.getDashboardPin());
+        shop.setShopOwnerName(request.getShopOwnerName());
+        shop.setAddress(request.getAddress());
+        shop.setPincode(request.getPincode());
     }
 
     private Set<String> getRoleNames(Shop shop) {
