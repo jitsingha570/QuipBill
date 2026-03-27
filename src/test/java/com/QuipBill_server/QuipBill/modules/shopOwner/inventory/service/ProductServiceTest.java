@@ -51,5 +51,37 @@ class ProductServiceTest {
         verify(productRepository).save(saved.capture());
         assertSame(shop, saved.getValue().getShop());
     }
-}
 
+    @Test
+    void createProduct_blankBarcode_isSavedAsNull() {
+        ProductRepository productRepository = mock(ProductRepository.class);
+        ShopRepository shopRepository = mock(ShopRepository.class);
+
+        ProductService service = new ProductService(productRepository, shopRepository);
+
+        Long authenticatedShopId = 10L;
+
+        Shop shop = new Shop();
+        shop.setEmail("test@example.com");
+        shop.setPassword("x");
+        shop.setShopName("Shop");
+
+        when(shopRepository.findById(authenticatedShopId)).thenReturn(Optional.of(shop));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductRequest request = ProductRequest.builder()
+                .productName("P")
+                .barcode("   ")
+                .price(10.0)
+                .quantity(1)
+                .build();
+
+        service.createProduct(authenticatedShopId, request);
+
+        verify(productRepository, never()).findByBarcodeAndShop_Id(anyString(), anyLong());
+
+        ArgumentCaptor<Product> saved = ArgumentCaptor.forClass(Product.class);
+        verify(productRepository).save(saved.capture());
+        assertNull(saved.getValue().getBarcode());
+    }
+}

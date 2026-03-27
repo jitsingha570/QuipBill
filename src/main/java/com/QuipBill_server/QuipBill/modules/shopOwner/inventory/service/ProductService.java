@@ -29,8 +29,8 @@ public class ProductService {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
 
-        if (request.getBarcode() != null && !request.getBarcode().isBlank()) {
-            String barcode = request.getBarcode().trim();
+        String barcode = normalizeBarcode(request.getBarcode());
+        if (barcode != null) {
             productRepository.findByBarcodeAndShop_Id(barcode, shopId)
                     .ifPresent(p -> {
                         throw new ApiException(HttpStatus.CONFLICT, "Barcode already exists for this shop");
@@ -40,7 +40,7 @@ public class ProductService {
         Product product = Product.builder()
                 .shop(shop)
                 .productName(request.getProductName())
-                .barcode(request.getBarcode() != null ? request.getBarcode().trim() : null)
+                .barcode(barcode)
                 .price(request.getPrice())
                 .gstPercent(request.getGstPercent())
                 .gstEnabled(request.getGstEnabled())
@@ -87,8 +87,8 @@ public class ProductService {
         Product product = productRepository.findByProductIdAndShop_Id(productId, shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        if (request.getBarcode() != null && !request.getBarcode().isBlank()) {
-            String barcode = request.getBarcode().trim();
+        String barcode = normalizeBarcode(request.getBarcode());
+        if (barcode != null) {
             productRepository.findByBarcodeAndShop_Id(barcode, shopId)
                     .ifPresent(existing -> {
                         if (!existing.getProductId().equals(productId)) {
@@ -98,7 +98,7 @@ public class ProductService {
         }
 
         product.setProductName(request.getProductName());
-        product.setBarcode(request.getBarcode() != null ? request.getBarcode().trim() : null);
+        product.setBarcode(barcode);
         product.setPrice(request.getPrice());
         product.setGstPercent(request.getGstPercent());
         product.setGstEnabled(request.getGstEnabled());
@@ -146,5 +146,13 @@ public class ProductService {
                 product.getGstEnabled(),
                 product.getStockQuantity()
         );
+    }
+
+    private String normalizeBarcode(String barcode) {
+        if (barcode == null) {
+            return null;
+        }
+        String normalized = barcode.trim();
+        return normalized.isBlank() ? null : normalized;
     }
 }
