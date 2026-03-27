@@ -1,41 +1,38 @@
 package com.QuipBill_server.QuipBill.modules.authentication.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;//line decode 
-import jakarta.persistence.*; //
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
-import java.util.HashSet; //hashset use to avoid duplicate role , it is a collection of java 
-import java.util.Set;  //set use to  
+import java.util.HashSet;
+import java.util.Set;
 
-@Entity   //
-@Table(name = "users", 
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = "username"),
-                @UniqueConstraint(columnNames = "email")
-        })
-        // create a class which 
+@Entity
+@Table(
+    name = "users",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email") // ✅ removed username constraint (not used)
+    }
+)
 public class Shop {
 
+    // ================= PRIMARY KEY =================
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // ✅ AUTO INCREMENT FIX
     private Long id;
 
     // ================= BASIC LOGIN =================
 
-    //@Column(nullable = false, length = 100)
-    //private String username;
-
     @Column(nullable = false, length = 150)
     private String email;
 
-     @Column(name = "mobile_number", length = 15)
+    @Column(name = "mobile_number", length = 15)
     private String mobileNumber;
 
-    @JsonIgnore   // 🔥 Never expose password in API
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
-    //pin for finally unlock the dashboard for shop owner
     @Column(name = "dashboard_pin", length = 10)
     private String dashboardPin;
 
@@ -49,44 +46,40 @@ public class Shop {
 
     @Column(length = 500)
     private String address;
-    
-    //pincode 
 
     @Column(name = "pincode", length = 10)
     private String pincode;
-    //private Double latitude;
-    //private Double longitude;
 
-    // ================= OTP FIELDS =================
+    // ================= OTP =================
 
     @Column(length = 10)
     private String otp;
 
+    @Column(name = "otp_expiry")
     private LocalDateTime otpExpiry;
 
     @Column(name = "is_verified")
     private Boolean verified = false;
 
-    // ================= SYSTEM FIELDS =================
+    // ================= SYSTEM =================
 
-    @Column(name = "is_active") //its for admin to block the shop if they are doing any wrong activity
+    @Column(name = "is_active")
     private Boolean active = true;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-     
-    
+
     // ================= ROLES =================
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),     // FK → users.id
+        inverseJoinColumns = @JoinColumn(name = "role_id") // FK → roles.id
     )
     private Set<Role> roles = new HashSet<>();
 
-    // ================= CONSTRUCTORS =================
+    // ================= CONSTRUCTOR =================
 
     public Shop() {}
 
@@ -97,11 +90,11 @@ public class Shop {
         this.createdAt = LocalDateTime.now();
     }
 
-    // ================= UTILITY METHODS =================
+    // ================= RELATION HELPERS =================
 
     public void addRole(Role role) {
         this.roles.add(role);
-        role.getUsers().add(this);   // 🔥 Keep both sides synced
+        role.getUsers().add(this);
     }
 
     public void removeRole(Role role) {
@@ -111,132 +104,45 @@ public class Shop {
 
     // ================= GETTERS & SETTERS =================
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
 
-    /*public String getUsername() {
-        return username;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-*/
-    public String getEmail() {
-        return email;
-    }
+    public String getMobileNumber() { return mobileNumber; }
+    public void setMobileNumber(String mobileNumber) { this.mobileNumber = mobileNumber; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
-    public String getMobileNumber() {
-        return mobileNumber;
-    }
+    public String getDashboardPin() { return dashboardPin; }
+    public void setDashboardPin(String dashboardPin) { this.dashboardPin = dashboardPin; }
 
-    public void setMobileNumber(String mobileNumber) {
-        this.mobileNumber = mobileNumber;
-    }
-    public String getPassword() {
-        return password;
-    }
+    public String getShopName() { return shopName; }
+    public void setShopName(String shopName) { this.shopName = shopName; }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    public String getShopOwnerName() { return shopOwnerName; }
+    public void setShopOwnerName(String shopOwnerName) { this.shopOwnerName = shopOwnerName; }
 
-        public String getDashboardPin() {
-            return dashboardPin;
-        }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
-    public void setDashboardPin(String dashboardPin) {
-        this.dashboardPin = dashboardPin;
-    }
+    public String getPincode() { return pincode; }
+    public void setPincode(String pincode) { this.pincode = pincode; }
 
-    public String getShopName() {
-        return shopName;
-    }
+    public String getOtp() { return otp; }
+    public void setOtp(String otp) { this.otp = otp; }
 
-    public void setShopName(String shopName) {
-        this.shopName = shopName;
-    }
+    public LocalDateTime getOtpExpiry() { return otpExpiry; }
+    public void setOtpExpiry(LocalDateTime otpExpiry) { this.otpExpiry = otpExpiry; }
 
-    public String getShopOwnerName() {
-        return shopOwnerName;
-    }
+    public Boolean getVerified() { return verified; }
+    public void setVerified(Boolean verified) { this.verified = verified; }
 
-    public void setShopOwnerName(String shopOwnerName) {
-        this.shopOwnerName = shopOwnerName;
-    }
-    public String getAddress() {
-        return address;
-    }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
 
-    public String getPincode() {
-        return pincode;
-    }
-
-    public void setPincode(String pincode) {
-        this.pincode = pincode;
-    }
-   /*  public Double getLatitude() {
-        return latitude;
-    }*/
-
-    /*public void setLatitude(Double latitude) {
-        this.latitude = latitude;
-    }
-
-    public Double getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(Double longitude) {
-        this.longitude = longitude;
-    }*/
-
-    public Boolean getActive() {
-        return active;
-    }
-
-    public void setActive(Boolean active) {
-        this.active = active;
-    }
-
-    public Set<Role> getRoles() {
-        return roles;
-    }
-
-    public String getOtp() {
-        return otp;
-    }
-
-    public void setOtp(String otp) {
-        this.otp = otp;
-    }
-
-    public LocalDateTime getOtpExpiry() {
-        return otpExpiry;
-    }
-
-    public void setOtpExpiry(LocalDateTime otpExpiry) {
-        this.otpExpiry = otpExpiry;
-    }
-
-    public Boolean getVerified() {
-        return verified;
-    }
-
-    public void setVerified(Boolean verified) {
-        this.verified = verified;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public Set<Role> getRoles() { return roles; }
 }

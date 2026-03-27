@@ -7,7 +7,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "products")
+@Table(
+        name = "products",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"shop_id", "barcode"})
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,7 +31,7 @@ public class Product {
     @Column(nullable = false)  
     private String productName;
 
-    @Column(unique = true)
+    @Column
     private String barcode;
 
     private Double price;

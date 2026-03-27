@@ -35,5 +35,4 @@ target/
 hs_err_pid*
 replay_pid*
 
-./src/main/resources/application.properties
 .env

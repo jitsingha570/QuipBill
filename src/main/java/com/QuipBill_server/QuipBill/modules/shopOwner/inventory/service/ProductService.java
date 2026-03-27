@@ -24,15 +24,23 @@ public class ProductService {
     private final ShopRepository shopRepository;
 
     // Create product
-    public ProductResponse createProduct(ProductRequest request) {
+    public ProductResponse createProduct(Long shopId, ProductRequest request) {
 
-        Shop shop = shopRepository.findById(request.getShopId())
+        Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
+
+        String barcode = normalizeBarcode(request.getBarcode());
+        if (barcode != null) {
+            productRepository.findByBarcodeAndShop_Id(barcode, shopId)
+                    .ifPresent(p -> {
+                        throw new ApiException(HttpStatus.CONFLICT, "Barcode already exists for this shop");
+                    });
+        }
 
         Product product = Product.builder()
                 .shop(shop)
                 .productName(request.getProductName())
-                .barcode(request.getBarcode())
+                .barcode(barcode)
                 .price(request.getPrice())
                 .gstPercent(request.getGstPercent())
                 .gstEnabled(request.getGstEnabled())
@@ -65,27 +73,32 @@ public class ProductService {
     }
 
     // Get by ID
-    public ProductResponse getProductById(Long productId) {
+    public ProductResponse getProductById(Long shopId, Long productId) {
 
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByProductIdAndShop_Id(productId, shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
 
         return mapToResponse(product);
     }
 
     // Update
-    public ProductResponse updateProduct(Long productId, ProductRequest request) {
+    public ProductResponse updateProduct(Long shopId, Long productId, ProductRequest request) {
 
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByProductIdAndShop_Id(productId, shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        if (request.getShopId() != null &&
-                !request.getShopId().equals(product.getShop().getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Shop mismatch");
+        String barcode = normalizeBarcode(request.getBarcode());
+        if (barcode != null) {
+            productRepository.findByBarcodeAndShop_Id(barcode, shopId)
+                    .ifPresent(existing -> {
+                        if (!existing.getProductId().equals(productId)) {
+                            throw new ApiException(HttpStatus.CONFLICT, "Barcode already exists for this shop");
+                        }
+                    });
         }
 
         product.setProductName(request.getProductName());
-        product.setBarcode(request.getBarcode());
+        product.setBarcode(barcode);
         product.setPrice(request.getPrice());
         product.setGstPercent(request.getGstPercent());
         product.setGstEnabled(request.getGstEnabled());
@@ -99,9 +112,9 @@ public class ProductService {
 
     // Delete
     @Transactional
-    public void deleteProduct(Long productId) {
+    public void deleteProduct(Long shopId, Long productId) {
 
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByProductIdAndShop_Id(productId, shopId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
 
         productRepository.delete(product);
@@ -133,5 +146,13 @@ public class ProductService {
                 product.getGstEnabled(),
                 product.getStockQuantity()
         );
+    }
+
+    private String normalizeBarcode(String barcode) {
+        if (barcode == null) {
+            return null;
+        }
+        String normalized = barcode.trim();
+        return normalized.isBlank() ? null : normalized;
     }
 }

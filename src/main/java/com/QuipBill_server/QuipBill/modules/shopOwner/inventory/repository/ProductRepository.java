@@ -14,6 +14,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Existing methods ✅
     Optional<Product> findByBarcode(String barcode);
 
+    Optional<Product> findByBarcodeAndShop_Id(String barcode, Long shopId);
+
     List<Product> findByShop_Id(Long shopId);
 
     Optional<Product> findByProductIdAndShop_Id(Long productId, Long shopId);

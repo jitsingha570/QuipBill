@@ -80,6 +80,24 @@ public class GlobalExceptionHandler {
 
         log.error("Database constraint violation", ex);
 
+        String causeLower = cause != null ? cause.toLowerCase() : "";
+        if (causeLower.contains("duplicate key value violates unique constraint")) {
+
+            String message = "Duplicate value already exists";
+            if (causeLower.contains("(barcode)")) {
+                message = "Barcode already exists";
+            }
+
+            ErrorResponse error = ErrorResponse.builder()
+                    .status(HttpStatus.CONFLICT.value())
+                    .error(HttpStatus.CONFLICT.getReasonPhrase())
+                    .message(message)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
         ErrorResponse error = ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")

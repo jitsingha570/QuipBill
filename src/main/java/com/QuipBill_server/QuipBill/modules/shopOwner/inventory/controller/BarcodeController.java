@@ -5,6 +5,7 @@ import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service.BarcodeL
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,9 +17,11 @@ public class BarcodeController {
 
     @GetMapping("/{barcode}")
     public ResponseEntity<BarcodeLookupResponse> lookupProduct(
-            @PathVariable String barcode) {
+            @PathVariable String barcode,
+            Authentication authentication) {
 
-        BarcodeLookupResponse response = barcodeLookupService.lookup(barcode);
+        Long shopId = Long.parseLong(authentication.getName());
+        BarcodeLookupResponse response = barcodeLookupService.lookup(shopId, barcode);
 
         if (response == null) {
             return ResponseEntity.notFound().build();
