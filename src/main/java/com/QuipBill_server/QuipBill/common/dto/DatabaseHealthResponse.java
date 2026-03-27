@@ -1,7 +1,7 @@
 package com.QuipBill_server.QuipBill.common.dto;
 
-public record HealthResponse(
+public record DatabaseHealthResponse(
         String status,
-        String service
+        String database
 ) {
 }

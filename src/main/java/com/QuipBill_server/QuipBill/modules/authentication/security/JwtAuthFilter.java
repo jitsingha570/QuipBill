@@ -43,7 +43,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || "/api/auth/verify-otp".equals(path)
                 || "/api/auth/login".equals(path)
                 || "/api/auth/refresh".equals(path)
-                || "/api/health".equals(path);
+                || "/api/health".equals(path)
+                || "/api/health/db".equals(path)
+                || "/health".equals(path)
+                || "/health/db".equals(path);
     }
 
     @Override

@@ -37,12 +37,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/health",
+                                "/health/db",
                                 "/api/auth/register",
                                 "/api/auth/verify-otp",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
-                                "/api/health"
+                                "/api/health",
+                                "/api/health/db"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -61,4 +63,3 @@ public class SecurityConfig {
         return encoder;
     }
 }
-

@@ -17,7 +17,7 @@ class HealthCheckServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         when(jdbcTemplate.execute(any(org.springframework.jdbc.core.ConnectionCallback.class))).thenReturn(true);
 
-        HealthCheckService service = new HealthCheckService(jdbcTemplate, 2);
+        HealthCheckService service = new HealthCheckService(jdbcTemplate, 2, 2, 0);
 
         assertTrue(service.isDatabaseHealthy());
     }
@@ -28,7 +28,7 @@ class HealthCheckServiceTest {
         when(jdbcTemplate.execute(any(org.springframework.jdbc.core.ConnectionCallback.class)))
                 .thenThrow(new DataAccessResourceFailureException("Database unavailable"));
 
-        HealthCheckService service = new HealthCheckService(jdbcTemplate, 2);
+        HealthCheckService service = new HealthCheckService(jdbcTemplate, 2, 2, 0);
 
         assertFalse(service.isDatabaseHealthy());
     }

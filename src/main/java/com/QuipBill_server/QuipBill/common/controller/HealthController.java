@@ -1,14 +1,12 @@
 package com.QuipBill_server.QuipBill.common.controller;
 
+import com.QuipBill_server.QuipBill.common.dto.DatabaseHealthResponse;
 import com.QuipBill_server.QuipBill.common.dto.HealthResponse;
 import com.QuipBill_server.QuipBill.common.service.HealthCheckService;
-import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,31 +22,25 @@ public class HealthController {
 
     @GetMapping({"/health", "/api/health"})
     public ResponseEntity<HealthResponse> health() {
-        long startTime = System.nanoTime();
-        boolean databaseHealthy = healthCheckService.isDatabaseHealthy();
-        long responseTimeMs = (System.nanoTime() - startTime) / 1_000_000;
+        log.debug("Liveness check passed.");
+        return ResponseEntity.ok(new HealthResponse("UP", "RUNNING"));
+    }
 
-        if (!databaseHealthy) {
-            log.warn("Health check failed. Database unavailable. responseTimeMs={}", responseTimeMs);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new HealthResponse(
-                            "DOWN",
-                            "QuipBill",
-                            "DOWN",
-                            Instant.now(),
-                            responseTimeMs,
-                            "Application is running but database is unavailable"
-                    ));
+    @GetMapping({"/health/db", "/api/health/db"})
+    public ResponseEntity<DatabaseHealthResponse> databaseHealth() {
+        try {
+            boolean databaseHealthy = healthCheckService.isDatabaseHealthy();
+
+            if (!databaseHealthy) {
+                log.warn("Database health check failed.");
+                return ResponseEntity.ok(new DatabaseHealthResponse("UP", "DOWN"));
+            }
+
+            log.debug("Database health check passed.");
+            return ResponseEntity.ok(new DatabaseHealthResponse("UP", "UP"));
+        } catch (Exception ex) {
+            log.error("Database health endpoint encountered an unexpected error.", ex);
+            return ResponseEntity.ok(new DatabaseHealthResponse("UP", "DOWN"));
         }
-
-        log.debug("Health check passed. responseTimeMs={}", responseTimeMs);
-        return ResponseEntity.ok(new HealthResponse(
-                "UP",
-                "QuipBill",
-                "UP",
-                Instant.now(),
-                responseTimeMs,
-                "Application and database are healthy"
-        ));
     }
 }
