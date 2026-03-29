@@ -15,6 +15,7 @@ public class BillItemRequest {
     
     private Long productId;
     private String productName;
+    private String barcode;
 
     @NotNull(message = "Price is required")
     private Double price;

@@ -2,6 +2,7 @@ package com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service;
 
 import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
 import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
+import com.QuipBill_server.QuipBill.modules.shopOwner.billing.dto.BillItemRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.entity.Product;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.repository.ProductRepository;
@@ -83,5 +84,35 @@ class ProductServiceTest {
         ArgumentCaptor<Product> saved = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(saved.capture());
         assertNull(saved.getValue().getBarcode());
+    }
+
+    @Test
+    void resolveProductForBilling_reusesExistingBarcodeInsteadOfCreatingDuplicate() {
+        ProductRepository productRepository = mock(ProductRepository.class);
+        ShopRepository shopRepository = mock(ShopRepository.class);
+
+        ProductService service = new ProductService(productRepository, shopRepository);
+
+        Long shopId = 10L;
+        Product existing = Product.builder()
+                .productId(55L)
+                .productName("Milk")
+                .barcode("890123")
+                .price(42.0)
+                .build();
+
+        when(productRepository.findByBarcodeAndShop_Id("890123", shopId)).thenReturn(Optional.of(existing));
+
+        BillItemRequest request = BillItemRequest.builder()
+                .productName("Milk")
+                .barcode("890123")
+                .price(42.0)
+                .quantity(1)
+                .build();
+
+        Product resolved = service.resolveProductForBilling(shopId, request);
+
+        assertSame(existing, resolved);
+        verify(productRepository, never()).saveAndFlush(any(Product.class));
     }
 }

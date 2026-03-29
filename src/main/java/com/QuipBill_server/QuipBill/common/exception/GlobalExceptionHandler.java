@@ -86,6 +86,14 @@ public class GlobalExceptionHandler {
             String message = "Duplicate value already exists";
             if (causeLower.contains("(barcode)")) {
                 message = "Barcode already exists";
+            } else if (causeLower.contains("bill_number")) {
+                message = "Bill number already exists";
+            } else if (causeLower.contains("_pkey")) {
+                message = "Primary key conflict detected. Database sequence may be out of sync.";
+            }
+
+            if (cause != null && !cause.isBlank()) {
+                message = message + " [" + cause + "]";
             }
 
             ErrorResponse error = ErrorResponse.builder()

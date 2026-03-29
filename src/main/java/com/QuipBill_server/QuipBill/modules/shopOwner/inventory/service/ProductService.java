@@ -1,6 +1,7 @@
 package com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service;
 
 import com.QuipBill_server.QuipBill.common.exception.ApiException;
+import com.QuipBill_server.QuipBill.modules.shopOwner.billing.dto.BillItemRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductResponse;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.ProductSearchResponse;
@@ -10,6 +11,7 @@ import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
 import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,10 +26,10 @@ public class ProductService {
     private final ShopRepository shopRepository;
 
     // Create product
+    @Transactional
     public ProductResponse createProduct(Long shopId, ProductRequest request) {
 
-        Shop shop = shopRepository.findById(shopId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
+        Shop shop = getShop(shopId);
 
         String barcode = normalizeBarcode(request.getBarcode());
         if (barcode != null) {
@@ -120,6 +122,20 @@ public class ProductService {
         productRepository.delete(product);
     }
 
+    @Transactional
+    public Product resolveProductForBilling(Long shopId, BillItemRequest item) {
+        if (item == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid bill item");
+        }
+
+        if (item.getProductId() != null) {
+            return productRepository.findByProductIdAndShop_Id(item.getProductId(), shopId)
+                    .orElseGet(() -> findOrCreateProductForBilling(shopId, item));
+        }
+
+        return findOrCreateProductForBilling(shopId, item);
+    }
+
     // 🔄 Mapper → Full response
     private ProductResponse mapToResponse(Product product) {
 
@@ -148,11 +164,71 @@ public class ProductService {
         );
     }
 
+    private Product findOrCreateProductForBilling(Long shopId, BillItemRequest item) {
+        String barcode = normalizeBarcode(item.getBarcode());
+        if (barcode != null) {
+            return productRepository.findByBarcodeAndShop_Id(barcode, shopId)
+                    .orElseGet(() -> createProductForBilling(shopId, item, barcode));
+        }
+
+        String productName = normalizeProductName(item.getProductName());
+        return productRepository.findByProductNameAndShop_Id(productName, shopId)
+                .orElseGet(() -> createProductForBilling(shopId, item, null));
+    }
+
+    private Product createProductForBilling(Long shopId, BillItemRequest item, String barcode) {
+        Shop shop = getShop(shopId);
+        String productName = normalizeProductName(item.getProductName());
+
+        Double gstPercent = item.getGstPercent();
+        Boolean gstEnabled = item.getGstEnabled();
+        if (gstPercent == null || gstPercent <= 0) {
+            gstPercent = 0.0;
+            gstEnabled = false;
+        } else if (gstEnabled == null) {
+            gstEnabled = true;
+        }
+
+        Product product = Product.builder()
+                .shop(shop)
+                .productName(productName)
+                .barcode(barcode)
+                .price(item.getPrice())
+                .gstPercent(gstPercent)
+                .gstEnabled(gstEnabled)
+                .stockQuantity(item.getQuantity() != null ? item.getQuantity() : 0)
+                .build();
+
+        try {
+            return productRepository.saveAndFlush(product);
+        } catch (DataIntegrityViolationException ex) {
+            if (barcode != null) {
+                return productRepository.findByBarcodeAndShop_Id(barcode, shopId)
+                        .orElseThrow(() -> ex);
+            }
+
+            return productRepository.findByProductNameAndShop_Id(productName, shopId)
+                    .orElseThrow(() -> ex);
+        }
+    }
+
     private String normalizeBarcode(String barcode) {
         if (barcode == null) {
             return null;
         }
         String normalized = barcode.trim();
         return normalized.isBlank() ? null : normalized;
+    }
+
+    private String normalizeProductName(String productName) {
+        if (productName == null || productName.trim().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Product name is required");
+        }
+        return productName.trim();
+    }
+
+    private Shop getShop(Long shopId) {
+        return shopRepository.findById(shopId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
     }
 }

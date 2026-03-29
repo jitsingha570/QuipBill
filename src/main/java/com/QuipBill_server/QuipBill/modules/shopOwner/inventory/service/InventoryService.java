@@ -6,12 +6,11 @@ import com.QuipBill_server.QuipBill.modules.shopOwner.billing.dto.BillRequest;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.dto.InventoryResponse;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.entity.Product;
 import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.repository.ProductRepository;
-import com.QuipBill_server.QuipBill.modules.authentication.entity.Shop;
-import com.QuipBill_server.QuipBill.modules.authentication.repository.ShopRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +20,7 @@ import java.util.List;
 public class InventoryService {
 
     private final ProductRepository productRepository;
-    private final ShopRepository shopRepository;
+    private final ProductService productService;
 
     // Add stock
     public InventoryResponse addStock(Long productId, Long shopId, int quantity) {
@@ -68,6 +67,7 @@ public class InventoryService {
     }
 
     // Reduce stock by billing items
+    @Transactional
     public List<InventoryResponse> reduceStockByBilling(BillRequest request, Long shopId) {
 
         if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
@@ -78,11 +78,16 @@ public class InventoryService {
 
         for (BillItemRequest item : request.getItems()) {
             if (item == null || item.getQuantity() == null
-                    || (item.getProductId() == null && (item.getProductName() == null || item.getProductName().isBlank()))) {
+                    || (item.getProductId() == null
+                    && (item.getBarcode() == null || item.getBarcode().isBlank())
+                    && (item.getProductName() == null || item.getProductName().isBlank()))) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid bill item");
             }
 
-            Product product = findProductForBilling(item, shopId);
+            Product product = productService.resolveProductForBilling(shopId, item);
+            item.setProductId(product.getProductId());
+            item.setProductName(product.getProductName());
+            item.setBarcode(product.getBarcode());
 
             int currentQty = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
             int newQty = currentQty;
@@ -95,53 +100,6 @@ public class InventoryService {
         }
 
         return responses;
-    }
-
-    private Product findProductForBilling(BillItemRequest item, Long shopId) {
-        if (item.getProductId() != null) {
-            return productRepository
-                    .findByProductIdAndShop_Id(item.getProductId(), shopId)
-                    .orElseGet(() -> findOrCreateByName(item, shopId));
-        }
-
-        return findOrCreateByName(item, shopId);
-    }
-
-    private Product findOrCreateByName(BillItemRequest item, Long shopId) {
-        String productName = item.getProductName();
-        if (productName == null || productName.isBlank()) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Product not found");
-        }
-
-        return productRepository
-                .findByProductNameAndShop_Id(productName.trim(), shopId)
-                .orElseGet(() -> createProductFromBillItem(item, shopId));
-    }
-
-    private Product createProductFromBillItem(BillItemRequest item, Long shopId) {
-        Shop shop = shopRepository.findById(shopId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Shop not found"));
-
-        Double gstPercent = item.getGstPercent();
-        Boolean gstEnabled = item.getGstEnabled();
-        if (gstPercent == null || gstPercent <= 0) {
-            gstPercent = 0.0;
-            gstEnabled = false;
-        } else if (gstEnabled == null) {
-            gstEnabled = true;
-        }
-
-        Product product = Product.builder()
-                .shop(shop)
-                .productName(item.getProductName().trim())
-                .barcode(null)
-                .price(item.getPrice())
-                .gstPercent(gstPercent)
-                .gstEnabled(gstEnabled)
-                .stockQuantity(item.getQuantity() != null ? item.getQuantity() : 0)
-                .build();
-
-        return productRepository.save(product);
     }
 
     private InventoryResponse mapToResponse(Product product) {

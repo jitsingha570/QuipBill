@@ -10,9 +10,12 @@ import com.QuipBill_server.QuipBill.modules.shopOwner.billing.entity.BillItem;
 import com.QuipBill_server.QuipBill.modules.shopOwner.billing.repository.BillRepository;
 import com.QuipBill_server.QuipBill.modules.shopOwner.billing.utils.BillingCalculator;
 import com.QuipBill_server.QuipBill.modules.shopOwner.billing.validation.BillingValidator;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.entity.Product;
+import com.QuipBill_server.QuipBill.modules.shopOwner.inventory.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,8 +29,10 @@ public class BillingServiceImpl implements BillingService {
     private final BillingValidator validator;
     private final BillingCalculator calculator;
     private final PrintService printService;
+    private final ProductService productService;
 
     @Override
+    @Transactional
     public BillResponse generateBill(BillRequest request, Long shopId) {
 
         validator.validateBillRequest(request);
@@ -50,6 +55,10 @@ public class BillingServiceImpl implements BillingService {
 
         List<BillItem> items = request.getItems().stream()
                 .map(itemRequest -> {
+                    Product product = productService.resolveProductForBilling(shopId, itemRequest);
+                    itemRequest.setProductId(product.getProductId());
+                    itemRequest.setProductName(product.getProductName());
+                    itemRequest.setBarcode(product.getBarcode());
 
                     double finalAmount = calculator.calculateItemFinalAmount(itemRequest);
                     double gstAmount = 0;
@@ -63,8 +72,8 @@ public class BillingServiceImpl implements BillingService {
 
                     return BillItem.builder()
                             .bill(bill)
-                            .productId(itemRequest.getProductId())
-                            .productName(itemRequest.getProductName())
+                            .productId(product.getProductId())
+                            .productName(product.getProductName())
                             .price(itemRequest.getPrice())
                             .quantity(itemRequest.getQuantity())
                             .discountPercent(itemRequest.getDiscountPercent())
